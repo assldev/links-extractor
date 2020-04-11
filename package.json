@@ -1,0 +1,14 @@
+{
+  "name": "links-extracter-tool",
+  "version": "1.0.0",
+  "description": "A tool to extract all links from a website.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "akshitsingla",
+  "license": "MIT",
+  "dependencies": {
+    "puppeteer": "^2.1.1"
+  }
+}
