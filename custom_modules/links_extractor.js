@@ -2,11 +2,20 @@ const puppeteer = require('puppeteer');
 
 var extractElements = async function (url) {
 
+  if (url.endsWith(".pdf")) {
+    throw new Error("INVALID_URL");
+  }
+
   const browser = await puppeteer.launch();
   const page = await browser.newPage();
   await page.goto(url, {
     waitUntil: 'networkidle0'
   });
+  const originialPageURL = page.url();
+  const originialPageURLWithoutParams = originialPageURL.split("?")[0].split("#")[0];
+  const pageURL = originialPageURLWithoutParams.endsWith("/") ?
+    originialPageURLWithoutParams.substring(0, originialPageURLWithoutParams.length - 1) :
+    originialPageURLWithoutParams;
 
   const elementHandles = await page.$$('a');
   const hrefHandles = await Promise.all(
@@ -17,16 +26,17 @@ var extractElements = async function (url) {
   );
   let uniqueHREFsSet = new Set(hrefStrings);
   filterEmptyLinks(uniqueHREFsSet);
-  filterSamePageLinks(page.url(), uniqueHREFsSet);
-  const uniqueURLs = Array.from(uniqueHREFsSet);
-  const subURLs = extractSubURLs(uniqueHREFsSet, page.url());
-  const externalURLs = uniqueURLs.filter(x => !subURLs.includes(x));
+  const uniqueURLsSet = filterSamePageLinks(uniqueHREFsSet, pageURL);
+  const uniqueURLsArray = Array.from(uniqueURLsSet);
+  const subURLsArray = extractSubURLs(uniqueURLsSet, pageURL);
+  const externalURLsArray = uniqueURLsArray.filter(x => !subURLsArray.includes(x));
 
   await browser.close();
 
   return {
-    'subURLs': subURLs,
-    'externalURLs': externalURLs
+    'selfURL': pageURL,
+    'subURLs': subURLsArray,
+    'externalURLs': externalURLsArray
   };
 };
 
@@ -34,22 +44,26 @@ var filterEmptyLinks = function (uniqueHREFsSet) {
   uniqueHREFsSet.delete('');
 }
 
-var filterSamePageLinks = function (pageURL, uniqueHREFsSet) {
-  let pageRoot = pageURL.substring(0, pageURL.length - 1);
+var filterSamePageLinks = function (uniqueHREFsSet, pageURL) {
+  let filteredSet = new Set();
   uniqueHREFsSet.forEach(function (url) {
-    if (url.startsWith(pageRoot + "#") ||
-      url.startsWith(pageRoot + "?") ||
-      url.startsWith(pageRoot + "/#") ||
-      url.startsWith(pageRoot + "/?")) {
-      uniqueHREFsSet.delete(url);
+    let actualURL = url.split("?")[0].split("#")[0];
+    if (actualURL[actualURL.length - 1] == "/") {
+      actualURL = actualURL.substring(0, actualURL.length - 1);
+    }
+    if (actualURL != pageURL) {
+      filteredSet.add(actualURL);
     }
   });
+  return filteredSet;
 }
 
-var extractSubURLs = function (uniqueHREFsSet, pagrURL) {
+var extractSubURLs = function (uniqueHREFsSet, pageURL) {
   let subURLs = [];
+  pageURL = pageURL.split("/")[2];
   uniqueHREFsSet.forEach(function (url) {
-    if (url.startsWith(pagrURL)) {
+    let siteURL = url.split("/")[2];
+    if (siteURL == pageURL) {
       subURLs.push(url);
     }
   });
