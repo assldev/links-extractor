@@ -3,7 +3,7 @@ const puppeteer = require('puppeteer');
 var extractElements = async function (url) {
 
   if (url.endsWith(".pdf")) {
-    throw new Error("INVALID_URL");
+    throw new Error(`INVALID_URL: ${url}`);
   }
 
   const browser = await puppeteer.launch();
